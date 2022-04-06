@@ -64,11 +64,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         if not res[0]:
             return
 
-        self.send_response(302)
-        # new_path = '%s%s' % (
-        #     'http://localhost:8000/list?token=', jsonData['token'])
-        # self.send_header('Location', 'https://7th.pingcap.net/thanks')
-        self.send_header('Location', cfg['host']+'/thanks')
+        self.send_response(200)
         self.end_headers()
 
         try:
