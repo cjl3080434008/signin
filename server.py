@@ -21,6 +21,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
                                       "HS256"], options={"verify_aud": False})
             curDateTime = datetime.utcnow().microsecond * 1000
             if curDateTime > decodedToken['exp']:
+                print('token expired')
                 self.auth(refertag)
                 return False, None
         except:
@@ -60,8 +61,9 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
-        token = str(self.headers["Authorization"]).strip("Bearer ")
+        token = str(self.headers["Authorization"])[7:]
         body = self.rfile.read(content_length)
+        print(token)
         jsonData = json.loads(body)
         res = self.do_auth(token, None)
         if not res[0]:
@@ -125,6 +127,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def list(self, token):
         if not self.do_auth(token, 'list')[0]:
+            print('unauth')
             self.unauth()
             return
 
@@ -153,7 +156,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             if "token" in query:
                 token = query['token'][0]
         if "Authorization" in self.headers:
-            token = str(self.headers["Authorization"]).strip("Bearer ")
+            token = str(self.headers["Authorization"])[7:]
 
         print(self.path)
         try:
