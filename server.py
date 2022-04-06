@@ -54,14 +54,18 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(bytes(thanksHtml, encoding='utf8'))
 
+    def unauth(self):
+        self.send_response(401)
+        self.end_headers()
+
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
-
+        token = str(self.headers["Authorization"]).strip("Bearer ")
         body = self.rfile.read(content_length)
         jsonData = json.loads(body)
-
-        res = self.do_auth(jsonData['token'], None)
+        res = self.do_auth(token, None)
         if not res[0]:
+            self.unauth()
             return
 
         self.send_response(200)
@@ -86,12 +90,11 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             mydbpool.put_connection(conn)
 
     def query_list(self, token, offset):
-        # if not self.do_auth(token, "auth")[0]:
-        #     return
+        if not self.do_auth(token, None)[0]:
+            self.unauth()
+            return
 
         self.send_response(200)
-        self.end_headers()
-
         data = {}
         data["finish"] = finish
         pics = []
@@ -117,10 +120,12 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
         data["next_offset"] = int(offset) + len(pics)
         data["pics"] = pics
+        self.end_headers()
         self.wfile.write(bytes(json.dumps(data), encoding='utf8'))
 
     def list(self, token):
-        if not self.do_auth(token, "list")[0]:
+        if not self.do_auth(token, 'list')[0]:
+            self.unauth()
             return
 
         self.send_response(200)
@@ -129,9 +134,9 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(bytes(content, encoding='utf8'))
 
     def finish(self, token):
-        # todo cjl
-        # if not self.do_auth(token, "auth")[0]:
-        #     return
+        if not self.do_auth(token, None)[0]:
+            self.unauth()
+            return
 
         global finish
         finish = True
@@ -140,8 +145,6 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(bytes('finished', encoding='utf8'))
 
     def do_GET(self):
-        thread = threading.current_thread()
-        print(thread)
         content = ""
         token = ""
         pr = urlparse.urlparse(self.path)
@@ -149,16 +152,17 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             query = urlparse.parse_qs(pr.query)
             if "token" in query:
                 token = query['token'][0]
+        if "Authorization" in self.headers:
+            token = str(self.headers["Authorization"]).strip("Bearer ")
 
         print(self.path)
         try:
-            if re.match(r"/front/.*", self.path):
-                content = open(self.path[1:]).read()
+            if self.path == '/':
                 self.send_response(200)
                 self.end_headers()
-                self.wfile.write(bytes(content, encoding='utf8'))
+                self.wfile.write(bytes(indexHtml, encoding='utf8'))
             elif re.match(r"/assets/.*", self.path):
-                content = open('front'+self.path).read()
+                content = open(self.path[1:]).read()
                 self.send_response(200)
                 if self.path.endswith('js'):
                     self.send_header("Content-type", "text/javascript")
@@ -169,10 +173,10 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
                     self.headers.set_type('image/svg+xml')
                 self.end_headers()
                 self.wfile.write(bytes(content, encoding='utf8'))
-            elif pr.path == "/signin":
-                self.signin(token)
-            elif pr.path == "/login":
-                self.auth('signin')
+            # elif pr.path == "/signin":
+            #     self.signin(token)
+            # elif pr.path == "/login":
+            #     self.auth('signin')
             elif pr.path == "/list":
                 self.list(token)
             elif pr.path == "/query_list":
@@ -181,8 +185,6 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.health()
             elif pr.path == "/finish":
                 self.finish(token)
-            elif pr.path == "/thanks":
-                self.thanks()
             else:
                 content = "Unknown Path"
                 self.send_response(404)
@@ -232,6 +234,7 @@ if __name__ == "__main__":
         authHtml = open("auth.html").read()
         authHtml = authHtml.replace("app_id", cfg['app_id'])
         camHtml = open("cam.html").read()
+        indexHtml = open("index.html").read()
         camHtml = camHtml.replace("pingcap_host", cfg['host'])
         listHtml = open("list.html").read()
         thanksHtml = open("thanks.html").read()
