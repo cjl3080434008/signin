@@ -227,7 +227,7 @@ if __name__ == "__main__":
                                              pool_reset_session=False,
                                              host=cfg['db'], port=cfg['db_port'],
                                              user=cfg['db_user'], password=cfg['db_pw'],
-                                             database="signin", auth_plugin='mysql_native_password')
+                                             database="signin")
 
         authHtml = open("auth.html").read()
         authHtml = authHtml.replace("app_id", cfg['app_id'])
