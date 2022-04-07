@@ -61,9 +61,9 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
+        print(content_length)
         token = str(self.headers["Authorization"])[7:]
         body = self.rfile.read(content_length)
-        print(token)
         jsonData = json.loads(body)
         res = self.do_auth(token, None)
         if not res[0]:
@@ -131,9 +131,34 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.unauth()
             return
 
+        try:
+            conn = mydbpool.get_connection()
+            cursor = conn.cursor(buffered=True)
+            cursor.execute(
+                "SELECT name, signin_date, photo FROM signin limit 20")
+            res = cursor.fetchall()
+            print("table length :", len(res))
+            content = listHtml
+            body = ""
+            for x in res:
+                if x[0] == None or x[1] == None or x[2] == None:
+                    continue
+                body += "<tr>"
+                body += "<td>" + x[0] + "</td>"
+                body += "<td>" + x[1].strftime('%Y-%m-%d %H:%M:%S') + "</td>"
+                body += "<td>" + "<img style='display:block; width:100px;height:100px;' src='" + \
+                    x[2] + "'/> </td>"
+                body += "</tr>"
+            content = content.replace("tag", body)
+        except Exception as e:
+            print(e)
+        finally:
+            cursor.close()
+            mydbpool.put_connection(conn)
+
         self.send_response(200)
         self.end_headers()
-        content = listHtml
+        # content = listHtml
         self.wfile.write(bytes(content, encoding='utf8'))
 
     def finish(self, token):
@@ -176,10 +201,10 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
                     self.headers.set_type('image/svg+xml')
                 self.end_headers()
                 self.wfile.write(bytes(content, encoding='utf8'))
-            # elif pr.path == "/signin":
-            #     self.signin(token)
-            # elif pr.path == "/login":
-            #     self.auth('signin')
+            elif pr.path == "/signin":
+                self.signin(token)
+            elif pr.path == "/login":
+                self.auth('signin')
             elif pr.path == "/list":
                 self.list(token)
             elif pr.path == "/query_list":
