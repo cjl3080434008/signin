@@ -1,3 +1,4 @@
+import urllib.parse as urlparse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import re
 from socketserver import ThreadingMixIn
@@ -7,9 +8,8 @@ import mysql.connector.pooling
 from datetime import datetime
 import jwt
 from threading import Semaphore
-import threading
+from authing.v2.authentication import AuthenticationClient, AuthenticationClientOptions
 # python3
-import urllib.parse as urlparse
 
 finish = False
 
@@ -214,6 +214,22 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.auth('signin')
             elif pr.path == "/list":
                 self.list(token)
+            elif pr.path == "/exchange_code":
+                if "code" in query:
+                    code = query['code'][0]
+                    print(code)
+                    token_resp = authentication_client.get_access_token_by_code(
+                        code)
+
+                print(token_resp)
+                if "token" in token_resp:
+                    data = {"token": token_resp["token"][0]}
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(bytes(json.dumps(data), encoding='utf8'))
+                else:
+                    self.send_response(400)
+                    self.end_headers()
             elif pr.path == "/query_list":
                 self.query_list(token, query["offset"][0])
             elif pr.path == "/health":
@@ -258,6 +274,16 @@ if __name__ == "__main__":
         cfg = json.load(cfgfile)
         cfgfile.close()
         print(cfg)
+
+        authentication_client = AuthenticationClient(
+            options=AuthenticationClientOptions(
+                app_id=cfg['app_id'],
+                app_host='https://pingcap.authing.cn',
+                secret=cfg['app_secret'],
+                protocol='oidc',
+                redirect_uri='https://pingcap.authing.cn',
+                token_endpoint_auth_method='client_secret_post'
+            ))
 
         mydbpool = ReallyMySQLConnectionPool(pool_name="signin",
                                              pool_size=32,
