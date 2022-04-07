@@ -161,7 +161,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         # content = listHtml
         self.wfile.write(bytes(content, encoding='utf8'))
 
-    def finish(self, token):
+    def dofinish(self, token):
         if not self.do_auth(token, None)[0]:
             self.unauth()
             return
@@ -217,7 +217,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             elif pr.path == "/health":
                 self.health()
             elif pr.path == "/finish":
-                self.finish(token)
+                self.dofinish(token)
             else:
                 content = "Unknown Path"
                 self.send_response(404)
