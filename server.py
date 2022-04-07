@@ -189,6 +189,11 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(bytes(indexHtml, encoding='utf8'))
+            elif pr.path == "/display.html":
+                content = open(self.path[1:]).read()
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(bytes(content, encoding='utf8'))
             elif re.match(r"/assets/.*", self.path):
                 content = open(self.path[1:]).read()
                 self.send_response(200)
