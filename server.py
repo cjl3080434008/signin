@@ -183,27 +183,29 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         if "Authorization" in self.headers:
             token = str(self.headers["Authorization"])[7:]
 
-        print(self.path)
+        print(pr.path)
         try:
-            if self.path == '/':
+            if pr.path == '/':
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(bytes(indexHtml, encoding='utf8'))
-            elif pr.path == "/display.html":
-                content = open(self.path[1:]).read()
+            elif re.match(r"/assets/.*", pr.path):
+                content = open(pr.path[1:]).read()
+
                 self.send_response(200)
+                if pr.path.endswith('js'):
+                    self.send_header("Content-type", "text/javascript")
+                elif pr.path.endswith('css'):
+                    self.send_header("Content-type", "text/css")
+                elif pr.path.endswith('svg'):
+                    self.send_header("Content-type", "image/svg+xml")
+                elif pr.path.endswith('jpg'):
+                    self.send_header("Content-type", "image/jpeg")
                 self.end_headers()
                 self.wfile.write(bytes(content, encoding='utf8'))
-            elif re.match(r"/assets/.*", self.path):
-                content = open(self.path[1:]).read()
+            elif pr.path == "/display.html":
+                content = displayHtml
                 self.send_response(200)
-                if self.path.endswith('js'):
-                    self.send_header("Content-type", "text/javascript")
-                elif self.path.endswith('css'):
-                    self.send_header("Content-type", "text/css")
-                elif self.path.endswith('svg'):
-                    self.send_header("Content-type", "image/svg+xml")
-                    self.headers.set_type('image/svg+xml')
                 self.end_headers()
                 self.wfile.write(bytes(content, encoding='utf8'))
             elif pr.path == "/signin":
@@ -271,6 +273,7 @@ if __name__ == "__main__":
         camHtml = camHtml.replace("pingcap_host", cfg['host'])
         listHtml = open("list.html").read()
         thanksHtml = open("thanks.html").read()
+        displayHtml = open("display.html").read()
         myServer = ThreadingHttpServer(
             ('0.0.0.0', 8000), SimpleHTTPRequestHandler)
         myServer.serve_forever()
